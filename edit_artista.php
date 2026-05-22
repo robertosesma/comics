@@ -13,12 +13,23 @@
 <?php
 session_start();
 include 'func_aux.php';
-$ok = true;
 if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] == true
     && isset($_SESSION['username'])) {
     $conn = connect();
+
+    $id = 0;
     if ($_SERVER["REQUEST_METHOD"] == "POST" ) $id = clear_input($_POST["id"]);
     if ($_SERVER["REQUEST_METHOD"] == "GET" ) $id = clear_input($_GET["id"]);
+
+    if (isset($_GET["ida"]) && isset($_GET["rol"]) && 
+        isset($_GET["del"]) && clear_input($_GET["del"])==1) {
+        // borrar artista + rol
+        $ida = clear_input($_GET["ida"]);
+        $rol = clear_input($_GET["rol"]);
+        $stmt = $conn -> prepare("DELETE FROM autores WHERE id=? AND ida=? AND rol=?");
+        $stmt->bind_param('iii',$id,$ida,$rol);
+        $stmt->execute();
+    }
 
     $stmt = $conn -> prepare('SELECT dcol.descrip AS coleccion,
         CONCAT_WS(" ", CONCAT("vol.", ficha.vol), ficha.num) as numero
@@ -33,13 +44,23 @@ if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] == true
     $title = $title.(strlen($r["numero"])>0 ? ' '.$r["numero"] : '');
     $title = $title.' (id:'.$id.')';
 
-    if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['add'])) {
-        // añadir artista  + rol
-        $ida = clear_input($_POST['artista_add']);
-        $rol = clear_input($_POST['rol_add']);
-        $stmt = $conn -> prepare('INSERT INTO autores (id, ida, rol) VALUES (?, ?, ?)');
-        $stmt->bind_param('iii', $id, $ida, $rol);
-        $stmt->execute();
+    if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        if (isset($_POST['add'])) {
+            // añadir artista + rol
+            $ida = clear_input($_POST['artista_add']);
+            $rol = clear_input($_POST['rol_add']);
+            $stmt = $conn -> prepare('INSERT INTO autores (id, ida, rol) VALUES (?, ?, ?)');
+            $stmt->bind_param('iii', $id, $ida, $rol);
+            $stmt->execute();
+        }
+        if (isset($_POST['nuevoartista'])) {
+            // añadir un NUEVO artista
+            $nombre = clear_input($_POST['newartista']);
+            $ida = getnextida($conn);
+            $stmt = $conn -> prepare('INSERT INTO dautores (ida, nombre) VALUES (?, ?)');
+            $stmt->bind_param('is', $ida, $nombre);
+            $stmt->execute();
+        }
     }
 
     // diccionario artistas
@@ -59,30 +80,30 @@ if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] == true
         ORDER BY autores.rol');
     $stmt->bind_param('i', $id);
     $stmt->execute();
-    $d = $stmt->get_result();
-} else {
-    $ok = false;
-}
-?>
+    $d = $stmt->get_result(); ?>
 
-<?php if ($ok) { ?>
 <div class="container">
     <div class="container-fluid">
         <div class="row">
-            <div class="col-8">
+            <?php if (!isMobile()) echo '<div class="col-8">'; ?>
                 <div class="container p-3 my-3 border">
                     <h4>Editar artistas</h4>
                     <h5><?php echo $title; ?></h5>
-                    <a class="btn btn-link" href="add_artista.php?id=<?php echo $id; ?>">Nuevo artista</a>
                     <a class="btn btn-link" href="ficha.php?id=<?php echo $id; ?>">Atrás</a>
-                    <a class="btn btn-link" href="logout.php">Salir</a>
                 </div>
-            </div>
+            <?php if (!isMobile()) echo '</div>'; ?>
         </div>
 
         <div class="row">
-            <div class="col-8">
+            <?php if (!isMobile()) echo '<div class="col-8">'; ?>
                 <form method="post" action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]);?>">
+                    <div class="input-group mb-2">
+                        <input type="text" class="form-control" name="newartista">
+                        <div class="input-group-append">
+                            <button type="submit" name="nuevoartista" class="btn btn-success">Nuevo</button>
+                        </div>
+                    </div>
+                
                     <div class="input-group">
                         <div class="input-group-prepend"><span class="input-group-text">Artista</span></div>
                         <select name="artista_add" class="custom-select">
@@ -102,11 +123,11 @@ if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] == true
                     <input type="text" class="form-control" hidden="true" name="id" value="<?php echo $id; ?>">
                     <button class="btn btn-primary mt-2 mb-5" name="add" type="submit">Añadir</button>
                 </form>
-            </div>
+            <?php if (!isMobile()) echo '</div>'; ?>
         </div>
 
         <div class="row">
-            <div class="col-8">
+            <?php if (!isMobile()) echo '<div class="col-8">'; ?>
                 <!-- tabla artistas y rol -->
                 <table cellpadding="0" cellspacing="0" border="0" class="table table-hover table-bordered">
                     <tbody>
@@ -115,13 +136,13 @@ if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] == true
                             <td><?php echo $r["nombre"]; ?></td>
                             <td><?php echo $r["rol"]; ?></td>
                             <?php
-                            $del = 'del_artista.php?id='.$id."&ida=".$r["ida"]."&rol=".$r["crol"];?>
+                            $del = 'del_artista.php?id='.$id."&ida=".$r["ida"]."&rol=".$r["crol"]."&del=1";?>
                             <td><a onClick="javascript: return confirm('¿Confirma que desea borrar?');" href=<?php echo $del ?>>x</a></td><tr>
                         </tr>
                     <?php } ?>
                     </tbody>
                 </table>
-            </div>
+            <?php if (!isMobile()) echo '</div>'; ?>
         </div>
     </div>
 </div>

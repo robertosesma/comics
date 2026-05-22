@@ -6,7 +6,7 @@ if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] == true
     $conn = connect();
     $id = clear_input($_GET["id"]);
 
-    // eliminar el artista
+    // eliminar la ficha
     $stmt = $conn -> prepare("DELETE FROM ficha WHERE id=?");
     $stmt->bind_param('i',$id);
     $stmt->execute();
