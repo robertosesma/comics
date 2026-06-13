@@ -18,11 +18,11 @@ $user = $pswd = "";
 $conn = connect();
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $user = clear_input($_POST["user"]);
+    $usr = clear_input($_POST["user"]);
     $pswd = clear_input($_POST["pswd"]);
 
     $stmt = $conn -> prepare("SELECT password FROM users WHERE username = ?");
-    $stmt->bind_param('s', $user);
+    $stmt->bind_param('s', $usr);
     $stmt->execute();
     $users = $stmt->get_result();
     $nrows = $users->num_rows;
